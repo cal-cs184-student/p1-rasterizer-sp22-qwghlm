@@ -1,5 +1,5 @@
 #include "rasterizer.h"
-
+#include <cmath>
 using namespace std;
 
 namespace CGL {
@@ -71,6 +71,30 @@ namespace CGL {
     float x2, float y2,
     Color color) {
     // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
+        float tri = area(x0, y0, x1, y1, x2, y2);
+        for (int i = 0; i < this->width; i++) {
+            for (int j = 0; j < this->height; j++) {
+                float x = (float) i + 0.5;
+                float y = (float) j + 0.5;
+
+                /** Approach 1
+                 * if (inside(tri, x0, y0, x1, y1, x2, y2, x, y)) {
+                    fill_pixel(i, j, color);
+                   }
+                 */
+                /** Approach 2
+                 */
+                 if (insideTri(x0, y0, x1, y1, x2, y2, x, y)) {
+                     fill_pixel(i, j, color);
+                 }
+            }
+        }
+
+
+    /** Approach 2
+     *
+     *
+     */
 
     // TODO: Task 2: Update to implement super-sampled rasterization
 
@@ -78,6 +102,33 @@ namespace CGL {
 
   }
 
+  bool RasterizerImp::insideTri(float x0, float y0,
+                                float x1, float y1,
+                                float x2, float y2,
+                                float i, float j) {
+
+  }
+
+  bool RasterizerImp::inside(float tri, float x0, float y0,
+              float x1, float y1,
+              float x2, float y2,
+              float  i, float j) {
+    float A1 = area(i, j, x1, y1, x2, y2);
+    float A2 = area(x0, y0, i, j, x2, y2);
+    float A3 = area(x0, y0, x1, y1, i, j);
+
+    if ((int) tri == (int) (A1 + A2 + A3)) {
+        return true;
+    }
+    return false;
+  }
+
+  float RasterizerImp::area(float x1, float y1,
+             float x2, float y2,
+             float x3, float y3) {
+
+      return (float) std::abs ((x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2.0);
+  }
 
   void RasterizerImp::rasterize_interpolated_color_triangle(float x0, float y0, Color c0,
     float x1, float y1, Color c1,

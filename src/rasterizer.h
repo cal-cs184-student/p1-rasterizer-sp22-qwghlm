@@ -34,6 +34,20 @@ namespace CGL {
       float x2, float y2,
       Color color) = 0;
 
+    virtual bool inside(float tri, float x0, float y0,
+      float x1, float y1,
+      float x2, float y2,
+      float  i, float j) = 0;
+
+    virtual bool insideTri(float x0, float y0,
+      float x1, float y1,
+      float x2, float y2,
+      float  i, float j) = 0;
+
+    virtual float area(float x0, float y0,
+      float x1, float y1,
+      float x2, float y2) = 0;
+
     virtual void rasterize_interpolated_color_triangle(float x0, float y0, Color c0,
       float x1, float y1, Color c1,
       float x2, float y2, Color c2) = 0;
@@ -104,6 +118,20 @@ namespace CGL {
       float x1, float y1,
       float x2, float y2,
       Color color);
+
+    bool insideTri(float x0, float y0,
+      float x1, float y1,
+      float x2, float y2,
+      float  i, float j);
+
+    bool inside(float tri, float x0, float y0,
+      float x1, float y1,
+      float x2, float y2,
+      float  i, float j);
+
+    float area(float x0, float y0,
+               float x1, float y1,
+               float x2, float y2);
 
     void rasterize_interpolated_color_triangle(float x0, float y0, Color c0,
       float x1, float y1, Color c1,
