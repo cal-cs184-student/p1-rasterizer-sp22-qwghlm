@@ -190,7 +190,49 @@ namespace CGL {
     // TODO: Task 5: Fill in the SampleParams struct and pass it to the tex.sample function.
     // TODO: Task 6: Set the correct barycentric differentials in the SampleParams struct.
     // Hint: You can reuse code from rasterize_triangle/rasterize_interpolated_color_triangle
+    int max_x = (int) max(max(x0, x1), x2);
+    int max_y = (int) max(max(y0, y1), y2);
+    int min_x = (int) min(min(x0, x1), x2);
+    int min_y = (int) min(min(y0, y1), y2);
 
+    auto samples = (float) (sqrt(sample_rate));
+    float alpha, beta, gamma;
+    float x, y;
+
+    for (int i = min_x; i <= max_x; i++) {
+        for (int j = min_y; j <= max_y; j++) {
+            int count = 0;
+
+            for (int w = 0; w < sample_rate; w++) {
+                for (int z = 0; z < sample_rate; z++) {
+                    x = (2*((float) i) + ((float) w)/samples + ((float) w + 1)/samples)/2;
+                    y = (2*((float) j) + ((float) z)/samples + ((float) z + 1)/samples)/2;
+
+
+                    if (insideTri(x0, y0, x1, y1, x2, y2, x, y)) {
+                        float A_b = area(x0, y0, x, y, x2, y2);
+                        float A_a = area(x2, y2, x, y, x1, y1);
+                        float A_c = area(x0, y0, x, y, x1, y1);
+                        float A = A_a + A_b + A_c;
+                        alpha = A_a / A;
+                        beta = A_b / A;
+                        gamma = A_c / A;
+
+                        float u = alpha * u0 + beta * u1 + gamma * u2;
+                        float v = alpha * v0 + beta * v1 + gamma * v2;
+                        Color c;
+                        if (psm == P_NEAREST) {
+                            c = tex.sample_nearest(Vector2D(u, v), 0);
+                        } else if (psm == P_LINEAR) {
+                            c = tex.sample_bilinear(Vector2D(u, v), 0);
+                        }
+                        sample_buffer[sample_rate * (j * width + i) + count] = c;
+                    }
+                    count++;
+                }
+            }
+        }
+    }
 
 
 

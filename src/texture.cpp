@@ -29,26 +29,49 @@ namespace CGL {
   Color Texture::sample_nearest(Vector2D uv, int level) {
     // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
-
-
-
-
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+    int tx = (int) min((size_t) mip.width - 1, (size_t) round(uv.x * (float) mip.width));
+    int ty = (int) min((size_t) mip.height - 1, (size_t) round( uv.y * (float) mip.height));
+    return mip.get_texel(tx, ty);
   }
 
   Color Texture::sample_bilinear(Vector2D uv, int level) {
     // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
+    uv.x *= (float) mip.width;
+    uv.y *= (float) mip.height;
+    int tx_top = ceil(uv.x);
+    int tx_bot = floor(uv.x);
+    int ty_top = ceil(uv.y);
+    int ty_bot = floor(uv.y);
 
+    float s = (float) uv.x - (float) tx_bot;
+    float t = (float) uv.y - (float) ty_bot;
 
+    if (outside(mip.width, tx_top) ||
+        outside(mip.width, tx_bot) ||
+        outside(mip.height, ty_top) ||
+        outside(mip.height, ty_bot)) {
+        return Color(1, 0, 1);
+    }
 
+    Color u00 = mip.get_texel(tx_bot, ty_bot);
+    Color u01 = mip.get_texel(tx_bot, ty_top);
+    Color u11 = mip.get_texel(tx_top, ty_top);
+    Color u10 = mip.get_texel(tx_top, ty_bot);
 
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+    Color u0 = lerp(s, u00, u10);
+    Color u1 = lerp(s, u01, u11);
+
+    return lerp(t, u0, u1);
   }
 
+  bool Texture::outside(size_t boundary, size_t value) {
+    return value < 0 && value >= boundary;
+  }
 
+  Color Texture::lerp(float x, Color v0, Color v1) {
+    return (1 - x) * v0 + x * v1;
+  }
 
   /****************************************************************************/
 
