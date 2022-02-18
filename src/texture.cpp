@@ -8,18 +8,56 @@ namespace CGL {
 
   Color Texture::sample(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
+    if (sp.lsm == L_ZERO) {
+        if (sp.psm == P_LINEAR) {
+            return sample_bilinear(sp.p_uv, 0);
+        } else {
+            return sample_nearest(sp.p_uv, 0);
+        }
+    } else if (sp.lsm == L_NEAREST) {
+        int nearest_level = (int) get_level(sp);
+        if (sp.psm == P_LINEAR) {
+            return sample_bilinear(sp.p_uv, nearest_level);
+        } else {
+            return sample_nearest(sp.p_uv, nearest_level);
+        }
+    } else if (sp.lsm == L_LINEAR) {
+        float nearest_level = get_level(sp);
+        float low_level = floor(nearest_level);
+        float high_level = ceil(nearest_level);
+        float x = (nearest_level - high_level)/(low_level + high_level);
 
-
-// return magenta for invalid level
-    return Color(1, 0, 1);
+        if (sp.psm == P_LINEAR) {
+            if (abs(nearest_level - floor(nearest_level)) < 1e-3)
+            {
+                return this->sample_bilinear(sp.p_uv, (int)nearest_level);
+            }
+            Color low_bilinear = sample_bilinear(sp.p_uv, (int) low_level);
+            Color high_bilinear = sample_bilinear(sp.p_uv, (int) high_level);
+            return x * low_bilinear + (1 - x) * high_bilinear;
+        } else {
+            if (abs(nearest_level - floor(nearest_level)) < 1e-3)
+            {
+                return this->sample_nearest(sp.p_uv, (int)nearest_level);
+            }
+            Color low_nearest = sample_nearest(sp.p_uv, (int) low_level);
+            Color high_nearest = sample_nearest(sp.p_uv, (int) high_level);
+            return x * high_nearest + (1 - x) * high_nearest;
+        }
+    } else {
+        return Color(1, 0, 1);
+    }
   }
 
   float Texture::get_level(const SampleParams& sp) {
     // TODO: Task 6: Fill this in.
+    Vector2D dx = (sp.p_dx_uv - sp.p_uv) * (float) width;
+    Vector2D dy = (sp.p_dy_uv - sp.p_uv) * (float) height;
 
-
-
-    return 0;
+    float L = max(dx.norm(), dy.norm());
+    if (L > (float) mipmap.size() - 1) return (float) mipmap.size() - 1;
+    if (L < 0) return 0;
+    return max(float(0), min(log2(L), (float)this->mipmap.size() - 1));
   }
 
   Color MipLevel::get_texel(int tx, int ty) {

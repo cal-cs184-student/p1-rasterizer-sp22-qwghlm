@@ -48,6 +48,11 @@ namespace CGL {
       float x1, float y1,
       float x2, float y2) = 0;
 
+    virtual Vector2D compute_barycentric_coordinates(float x0, float y0, float u0, float v0,
+                                                     float x1, float y1, float u1, float v1,
+                                                     float x2, float y2, float u2, float v2,
+                                                     float x, float y) = 0;
+
     virtual void rasterize_interpolated_color_triangle(float x0, float y0, Color c0,
       float x1, float y1, Color c1,
       float x2, float y2, Color c2) = 0;
@@ -132,6 +137,11 @@ namespace CGL {
     float area(float x0, float y0,
                float x1, float y1,
                float x2, float y2);
+
+    Vector2D compute_barycentric_coordinates(float x0, float y0, float u0, float v0,
+                                             float x1, float y1, float u1, float v1,
+                                             float x2, float y2, float u2, float v2,
+                                             float x, float y);
 
     void rasterize_interpolated_color_triangle(float x0, float y0, Color c0,
       float x1, float y1, Color c1,

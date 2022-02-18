@@ -196,7 +196,6 @@ namespace CGL {
     int min_y = (int) min(min(y0, y1), y2);
 
     auto samples = (float) (sqrt(sample_rate));
-    float alpha, beta, gamma;
     float x, y;
 
     for (int i = min_x; i <= max_x; i++) {
@@ -210,22 +209,17 @@ namespace CGL {
 
 
                     if (insideTri(x0, y0, x1, y1, x2, y2, x, y)) {
-                        float A_b = area(x0, y0, x, y, x2, y2);
-                        float A_a = area(x2, y2, x, y, x1, y1);
-                        float A_c = area(x0, y0, x, y, x1, y1);
-                        float A = A_a + A_b + A_c;
-                        alpha = A_a / A;
-                        beta = A_b / A;
-                        gamma = A_c / A;
+                        Vector2D p_uv = compute_barycentric_coordinates(x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2, x, y);
+                        Vector2D p_dx_uv = compute_barycentric_coordinates(x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2, x+1, y);
+                        Vector2D p_dy_uv = compute_barycentric_coordinates(x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2, x, y+1);
+                        SampleParams sp = SampleParams();
+                        sp.lsm = lsm;
+                        sp.psm = psm;
+                        sp.p_uv = p_uv;
+                        sp.p_dy_uv = p_dy_uv;
+                        sp.p_dx_uv = p_dx_uv;
+                        Color c = tex.sample(sp);
 
-                        float u = alpha * u0 + beta * u1 + gamma * u2;
-                        float v = alpha * v0 + beta * v1 + gamma * v2;
-                        Color c;
-                        if (psm == P_NEAREST) {
-                            c = tex.sample_nearest(Vector2D(u, v), 0);
-                        } else if (psm == P_LINEAR) {
-                            c = tex.sample_bilinear(Vector2D(u, v), 0);
-                        }
                         sample_buffer[sample_rate * (j * width + i) + count] = c;
                     }
                     count++;
@@ -236,6 +230,24 @@ namespace CGL {
 
 
 
+  }
+
+  Vector2D RasterizerImp::compute_barycentric_coordinates(float x0, float y0, float u0, float v0,
+                                                          float x1, float y1, float u1, float v1,
+                                                          float x2, float y2, float u2, float v2,
+                                                          float x, float y) {
+      float A_b = area(x0, y0, x, y, x2, y2);
+      float A_a = area(x2, y2, x, y, x1, y1);
+      float A_c = area(x0, y0, x, y, x1, y1);
+      float A = A_a + A_b + A_c;
+      float alpha = A_a / A;
+      float beta = A_b / A;
+      float gamma = A_c / A;
+
+      float u = alpha * u0 + beta * u1 + gamma * u2;
+      float v = alpha * v0 + beta * v1 + gamma * v2;
+
+      return Vector2D(u, v);
   }
 
   void RasterizerImp::set_sample_rate(unsigned int rate) {
