@@ -74,11 +74,15 @@ namespace CGL {
     Color color) {
     // TODO: Task 1: Implement basic triangle rasterization here, no supersampling
     // TODO: Task 2: Update to implement super-sampled rasterization
+    int max_x = (int) max(max(x0, x1), x2);
+    int max_y = (int) max(max(y0, y1), y2);
+    int min_x = (int) min(min(x0, x1), x2);
+    int min_y = (int) min(min(y0, y1), y2);
+
     auto samples = (float) (sqrt(sample_rate));
-    float x;
-    float y;
-    for (int i = 0; i < this->width; i++) {
-        for (int j = 0; j < this->height; j++) {
+    float x, y;
+    for (int i = min_x; i <= max_x; i++) {
+        for (int j = min_y; j <= max_y; j++) {
             int count = 0;
             for (int w = 0; w < samples; w++) {
                 for (int z = 0; z  < samples; z++) {
@@ -141,7 +145,38 @@ namespace CGL {
   {
     // TODO: Task 4: Rasterize the triangle, calculating barycentric coordinates and using them to interpolate vertex colors across the triangle
     // Hint: You can reuse code from rasterize_triangle
+    int max_x = (int) max(max(x0, x1), x2);
+    int max_y = (int) max(max(y0, y1), y2);
+    int min_x = (int) min(min(x0, x1), x2);
+    int min_y = (int) min(min(y0, y1), y2);
 
+    auto samples = (float) (sqrt(sample_rate));
+    float alpha, beta, gamma;
+    float x, y;
+
+    for (int i = min_x; i <= max_x; i++) {
+      for (int j = min_y; j <= max_y; j++) {
+          int count = 0;
+          for (int w = 0; w < samples; w++) {
+              for (int z = 0; z  < samples; z++) {
+
+                  x = (2*((float) i) + ((float) w)/samples + ((float) w + 1)/samples)/2;
+                  y = (2*((float) j) + ((float) z)/samples + ((float) z + 1)/samples)/2;
+                  float A_b = area(x0, y0, x, y, x2, y2);
+                  float A_a = area(x2, y2, x, y, x1, y1);
+                  float A_c = area(x0, y0, x, y, x1, y1);
+                  float A = A_a + A_b + A_c;
+                  alpha = A_a / A;
+                  beta = A_b / A;
+                  gamma = A_c / A;
+                  if (insideTri(x0, y0, x1, y1, x2, y2, x, y)) {
+                      sample_buffer[sample_rate * (j * width + i) + count] = alpha * c0 + beta * c1 + gamma * c2;
+                  }
+                  count++;
+              }
+          }
+      }
+    }
 
 
   }
