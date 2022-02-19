@@ -23,74 +23,236 @@
 
 <body>
 
-<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2022</h1>
 <h1 align="middle">Project 1: Rasterizer</h1>
-<h2 align="middle">YOUR NAME, CS184-??</h2>
+<h2 align="middle">Samson Petrosyan, CS184-QWGHLM</h2>
+<h4 align="middle"><i>QWGHLM is a city in the ficitional world depicted by Cryptonomicon</i></h4>
 
 <br><br>
 
 <div>
 
 <h2 align="middle">Overview</h2>
-<p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the project.</p>
+  <p>In the <i>Rasterizer</i> project I implemented ~ suspense ~ a rasterizer! I started from a more simple task - like sampling in a triangle - to a more complicated one like implementing bilinear sampling for textures.
+    Through the journey, I re-learned techniques of bettering image quality and getting rid of annoying jitters and discontinuities by various sampling techniques. While at it, I had the chance to ponder which of these
+    techniques is better in different scenarios by analyzing time and space complexity. In the end, I had a full-on rasterizer that can not only rasterize (hah!) but also convert SVGs into pixeled images (which was admittedly my favorite part by far).
+    In this write-up, I got to experiment with a Sonic image and learned more interesting things about sampling.</p>
+
 
 <h2 align="middle">Section I: Rasterization</h2>
 
 <h3 align="middle">Part 1: Rasterizing single-color triangles</h3>
 
-<p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p>
+  <p>
+    In this part, we implement simple triangle rasterization with a sample rate set to 1. Initially, I implemented
+    a different approach from the one discussed in the lecture when it comes to figuring out whether a point belongs to a triangle
+    or not, but soon after I also added the method covered in the lecture. The main idea behind the former method is to calculate the
+    areas of auxiliary triangles, sum them, and compare them to the area of the original triangle. If the two are equal, then we
+    know that the point belongs to the triangle. To implement this approach, I wrote two function - <strong>inside</strong>
+    and <strong>area</strong>. The second approach - as discussed in the lecture - involved computing the line equations formed by
+    the vertices of the triangle and figuring out which side of the line the point fell into. With three such constraints, we are
+    able to figure out whether the point falls inside the triangle or not. This method was implemented in the <strong>insideTri</strong> function.
 
-<div align="middle">
-  <table style="width=100%">
-    <tr>
-      <td>
-        <img src="images/image1.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-      <td>
-        <img src="images/image2.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-    </tr>
-    <br>
-    <tr>
-      <td>
-        <img src="images/image3.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-      <td>
-        <img src="images/image4.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-    </tr>
-  </table>
-</div>
+    <p>
+    <p>
+  Initially, my algorithm went through every pixel in the canvas and checked whether that point was in the triangle or not. This was a
+  rather naive and time/space consuming method, and I later discovered that we can use the bounded box to limit the range of the indices we iterate over.
+  Specifiaclly, we would pick the minimum and maximum of <i>x</i> and <i>y</i> coordinates, and bound the box by <i>min(x), min(y)</i> and <i>max(x), max(y)</i>.
+  Admittedly, I did not get to implement this approach until I got to part 2, where I noticed a significant slow-down when increasing sampling frequency. Of course,
+  my algorithm is no worse than the one that checks each sample within the bounding box because it is exactly the same algorithm.
+
+    </p>
+    <p>
+      The two images below show basic/test4.svg with and without the pixel inspector. With these triangles, it's a bit
+      hard to see whether the edges are smooth or not, but the pixel inspector shows that there are definitely some jaggies present
+      as well as discontinuities. The latter is more applicable to the narrower triangles (red and pink).
+    </p>
+  <div align="middle">
+    <img src="../cmake-build-debug/default_insp.png" align="middle" width="400px"/>
+    <img src="../cmake-build-debug/default.png" align="middle" width="400px"/>
+  </div>
 
 
 <h3 align="middle">Part 2: Antialiasing triangles</h3>
+  <p>
+    This part consumed most time due to two reasons. First, finding the right equation for generalizing sampling position, and second, dealing with
+    segmentation faults. Finding the general equation for an NxN sampling scheme turned out to be easier than the latter issue, but nonetheless, it took
+    some time. The idea was to pick the line segments that intersected the pixel at edges and then take the average of them, which would give the center
+    position of each of the smaller pixels. Doing this for both horizontal and vertical axis gave the right coordinates for each subsample. Supersampling is useful
+    because we consider more points inside a circle to identify its color. This is more useful for edges than for a pixel in the middle of a triangle
+    since the former will likely have parts both inside and outside of the triangle. So, supersampling is useful because we can identify
+    precisely how much of the pixel is outside and "fade" the color accordingly. The method gives an overall smoother-looking picture.
 
+  </p>
 
+  <p>
+    To build on top of the algorithm we already had in place, we added two more loops inside the <strong>rasterize_triangle</strong> function.
+    The important note is that with supersampling we require more memory, and thus we must use a <i>sample buffer</i> first, and then downsample
+    from this buffer to the actual <i>frame buffer</i>. The process involves making minor changes to several of the functions to account for a larger
+    <i>sample buffer</i>. This is the part where I screwed up and got all of the segmentation faults. Inside <strong>clear_buffers</strong>
+    function I accidentally multiplied the <i>sample rate</i> with the <i>height</i> and <i>width</i> of the previous <i>frame buffer</i>. In hindsight, this
+    was a rather trivial mistake that could have been fixed quite quickly, but then again, I did not know as much then as I know now, so the overall debugging
+    experience was useful.
+
+  </p>
+
+  <p>
+    One might say that in this implementation antialiasing comes as a bonus, meaning that we achieved antialiasing by smoothing the edges. That is equivalent to
+    filtering out higher frequencies. So, in sum, smoothing the edges is really the same as getting rid of aliasing, and the paragraphs above go on a bit more
+    depth on how that was done.
+
+  </p>
+  <p>
+    Below we show a region of a red skinny triangle that has both jaggies and discontinuities. The leftmost picture shows
+    the rasterization with a sample rate set to 1. The middle picture illustrates the same region with a sample rate set to 4. We
+    can already observe that all discontinuities have been removed as well as some of the jaggies. The rightmost image which has
+    a sample rate set to 16, shows how the remaining jaggies can be removed. Overall, without much surprise, the rightmost image is the
+    smoothest of all. The reason we get smoother results with increasing the number of samples per pixel is simply that we are looking
+    at more points in each pixel. Some pixels are not binary, meaning inside the circle or not. In some, only a part of the pixel is inside, so
+    by sampling more and then averaging the results we can a more accurate representation of how much inside the triangle a particular point is. The
+    further the pixel is from the triangle the lighter shade it will be, as can be observed in the picture with the sample rate set to 16.
+
+  </p>
+  <div align="middle">
+      <img src="../cmake-build-debug/red_tri_1.png" align="middle" width="300px"/>
+      <img src="../cmake-build-debug/red_tri_4.png" align="middle" width="300px"/>
+      <img src="../cmake-build-debug/red_tri_16.png" align="middle" width="300px"/>
+  </div>
 
 <h3 align="middle">Part 3: Transforms</h3>
-
-
-
+  Below is a picture of the robot that fell from the fifth floor. All I was trying to do was just flip him, and now he is gone :( He was a very good robot, and he will be missed.
+<div align="middle">
+<img src="my_robot.png" align="middle" width="300px">
+</div>
 <h2 align="middle">Section II: Sampling</h2>
 
 <h3 align="middle">Part 4: Barycentric coordinates</h3>
+  <p>
+    To me, the most intuitive explanation of barycentric coordinates is about the triangle vertices. Given,
+    the point is in the triangle, we can represent it using its three vertices. Why does this work? Because we can
+    translate three vertices into two vectors that form the basis of the hyperplane, we know from linear algebra that
+    any point in the hyperplane can be represented using these basis vectors. I like to think about barycentric coordinates
+    as the existing proportion of each vertex in the given point. That also extends nicely when each vertex has an assigned color.
+    The two pictures from the lecture illustrate these ideas.
 
+
+  </p>
+  <div align="middle">
+    <img  src="../cmake-build-debug/bay_tri_1.png" width="400px">
+    <img src="../cmake-build-debug/bay_tri_2.png" width="400px"/>
+  </div>
+  <p>
+    Below is the <i>test7.png</i> with default parameters and sample rate 1.
+  </p>
+  <div align="middle">
+    <img src="../cmake-build-debug/color_pal.png" align="middle" width="600px">
+  </div>
 
 <h3 align="middle">Part 5: "Pixel sampling" for texture mapping</h3>
+  <p>
+    In our texture space, we have something known as <i>uv</i> coordinates. These texture coordinates need a way to be
+    mapped onto the screen, and this is where pixel sampling comes in. Effectively, pixel sampling takes a pixel coordinates <i>(x, y)</i>
+    from the screen and maps to a <i>(u, v)</i> coordinate in the texture map. Once obtained the color value, it then rasterizes these onto
+    the screen.
 
+  </p>
+  <p>
+    The way I implemented pixel sampling was quite similar to rasterizing a point in a triangle from the previous parts. The only added difference
+    was computing Barycentric coordinates and then either sampling using nearest-neighbor or bilinear methods. Here, we will provide
+    a hitchhiker's guide through these two texture sampling methods. Nearest-neighbor sampling basically returns the next closest color to the given
+    coordinate whereas bilinear sampling computes the four adjacent texels and then does further computation using the <strong>lerp</strong> function
+    we covered in class. On a high level, nearest-neighbor only considers one texel and bilinear considered four.
 
+  </p>
+  <p>
+    Bilinear sampling creates smoother transitions between neighboring pixels as opposed to the nearest neighbor. We can observe that
+    by comparing the first column below. For reference, the first two represents the nearest-neighbor mapping with a sample rate set to 1
+    for the left image and sample rate set to 16 for the right image. Similarly, the second row represents bilinear mapping.
+
+  </p>
+  <p>
+    We can observe that with the sample rate set to 16, both linear and bilinear sampling yield much smoother edges. Zooming in a bit more, we can
+    actually see that bilinear sampling provides slightly smoother edges than the nearest neighbor sampling, although the difference is marginal.
+    What differentiates the most the first and second columns is the continuity. From the pixel picker, we can see that the edges are far
+    sharper with sample rate set to 1, while with sample rate et to 16, we have a more continuous distribution of pixel color. Since bilinear takes into
+    account more pixels than the nearest neighbor it is most natural to assume it will give an aesthetically more pleasant view. Again, in this image, it is hard to see without
+    squinting.
+
+  </p>
+
+<div align="middle">
+
+<div class="middle">
+  <img src="../cmake-build-debug/screenshot_2-18_19-8-31.png" align="middle" width="400px">
+  <img src="../cmake-build-debug/screenshot_2-18_19-8-59.png" align="middle" width="400px">
+</div>
+
+  <div style="display: inline" class="middle">
+    <p style="display: inline; width: 400px;" >Hello</p>
+    <p style="display: inline; width: 400px;">Hello2</p>
+  </div>
+
+  <div class="middle">
+
+  </div>
+  <div class="middle">
+    <img src="../cmake-build-debug/screenshot_2-18_19-9-15.png" align="middle" width="400px">
+    <img src="../cmake-build-debug/screenshot_2-18_19-10-2.png" align="middle" width="400px">
+  </div>
+</div>
 <h3 align="middle">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+  <p>
+    To understand level sampling let us first recall what mipmaps are. Mipmap can be thought of as a sequence of textures that has defined layers and each layer gets progressively lower resolution.
+    By this definition, level 0 should be the highest resolution. Now, level sampling is simply the process of picking samples from different mipmap layers depending on the provided coordinates.
 
+  </p>
+
+  <p>
+    Recall that from the previous part, we had already determined the <i>(u, v)</i> coordinates for each of the pixels. The remaining bit was to compute the difference (since pixels are discrete) coordinates,
+    which we do by finding equivalent <i>(u, v)</i>'s for <i>(x+1, y)</i> and <i>(x, y+1)</i>. Once, we have these we can compute the approximate level by the formula covered in the lecture, and then from there,
+    we had implemented the different level sampling techniques.
+
+  </p>
+
+  <p>
+    Comparing the results from level sampling and supersampling we can say that supersampling has the best output, but of course, it comes with huge costs. Specifically, the time required to sample
+    with higher sample rates comes with a polynomial overhead cost. In addition, the amount of memory we have to allocate for higher sample sizes is quadratic and is not scalable to very high sample rates.
+    Level sampling, on the other hand, is faster, but it usually comes with blurrier images. So, if the quality of the image is of vital importance, then supersampling might be a better alternative. Out of
+    all of these three, pixel sampling, in general, is the fastest. Between nearest neighbor and bilinear sampling, the nearest neighbor is faster simply because the number of arithmetic operations is less, but still
+    bilinear sampling is quite fast compared to other sampling techniques.
+
+  </p>
+
+  <p>
+    Below is four different sampling method used for the Sonic pictures. We can observe that the picture corresponding to L_ZERO + P_NEAREST and L_LINEAR + P_NEAREST give the smoothest results. From the first and  last
+    pictures, we can also observe that L_LINEAR tends to blur out the edges quite a bit.
+
+  </p>
+  <div align="middle">
+    <div align="middle">
+      <img src="../cmake-build-debug/screenshot_2-18_20-13-0.png" middle="middle" width="400px">
+      <img src="../cmake-build-debug/screenshot_2-18_20-13-24.png" middle="middle" width="400px">
+    </div>
+    <div align="middle">
+      <p style="display: inline; padding-right: 100px;">L_LINEAR + P_LINEAR </p>
+      <p style="display: inline ;padding-left: 100px;;">L_ZERO + P_NEAREST </p>
+    </div>
+    <div>
+      <img src="../cmake-build-debug/screenshot_2-18_20-13-42.png" middle="middle" width="400px">
+      <img src="../cmake-build-debug/screenshot_2-18_20-13-49.png" middle="middle" width="400px">
+    </div>
+
+    <div align="middle">
+      <p style="display: inline; padding-right: 100px;">L_NEAREST + P_LINEAR </p>
+      <p style="display: inline ;padding-left: 100px;;">L_LINEAR + P_NEAREST </p>
+    </div>
+  </div>
 
 
 <h2 align="middle">Section III: Art Competition</h2>
 <p>If you are not participating in the optional art competition, don't worry about this section!</p>
 
 <h3 align="middle">Part 7: Draw something interesting!</h3>
-
+No.
 </body>
 </html>
